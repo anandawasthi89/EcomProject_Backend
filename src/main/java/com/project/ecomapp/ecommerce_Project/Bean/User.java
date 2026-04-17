@@ -3,14 +3,20 @@ package com.project.ecomapp.ecommerce_Project.Bean;
 import javax.persistence.*;
 
 @Entity
-@Table
+@Table(name = "app_user")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private int UID;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(nullable = false, length = 100)
     private String name;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
+    @Column(nullable = false)
     private String password;
 
     public User() {
@@ -22,12 +28,12 @@ public class User {
         this.password = password;
     }
 
-    public int getUID() {
-        return UID;
+    public Integer getId() {
+        return id;
     }
 
-    public void setUID(int UID) {
-        this.UID = UID;
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -57,10 +63,9 @@ public class User {
     @Override
     public String toString() {
         return "User{" +
-                "UID=" + UID +
+                "id=" + id +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
-                ", password='" + password + '\'' +
                 '}';
     }
 }

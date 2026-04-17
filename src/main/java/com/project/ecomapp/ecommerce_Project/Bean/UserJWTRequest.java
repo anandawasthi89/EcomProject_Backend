@@ -1,11 +1,18 @@
 package com.project.ecomapp.ecommerce_Project.Bean;
 
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+
 public class UserJWTRequest {
 
+    @NotBlank
+    @Email
     private String email;
+
+    @NotBlank
     private String password;
 
-    public UserJWTRequest(){}
+    public UserJWTRequest() {}
 
     public UserJWTRequest(String email, String password) {
         this.email = email;
@@ -32,7 +39,6 @@ public class UserJWTRequest {
     public String toString() {
         return "UserJWTRequest{" +
                 "email='" + email + '\'' +
-                ", password='" + password + '\'' +
                 '}';
     }
 }

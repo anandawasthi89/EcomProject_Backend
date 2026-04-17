@@ -2,12 +2,15 @@ package com.project.ecomapp.ecommerce_Project.Config;
 
 import com.project.ecomapp.ecommerce_Project.Services.CustomUserDetailsService;
 import io.jsonwebtoken.ExpiredJwtException;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.jsonwebtoken.JwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
@@ -19,55 +22,45 @@ import java.io.IOException;
 @Component
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(JWTAuthenticationFilter.class);
 
-    @Autowired
-    private JWTUtils jwtUtils;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final JWTUtils jwtUtils;
+
+    public JWTAuthenticationFilter(CustomUserDetailsService customUserDetailsService, JWTUtils jwtUtils) {
+        this.customUserDetailsService = customUserDetailsService;
+        this.jwtUtils = jwtUtils;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-
-        final String requestHeaderToken = request.getHeader("Authorization");
-        System.out.println(requestHeaderToken);
-        String username = null;
-        String jwtToken = null;
-        if(requestHeaderToken!=null && requestHeaderToken.startsWith("Bearer ")){
-
-            jwtToken = requestHeaderToken.substring(7);
-            try {
-                username = this.jwtUtils.extractUsername(jwtToken);
-            }catch (ExpiredJwtException e){
-                e.printStackTrace();
-                System.out.println("token expired");
-            }catch(Exception e){
-                e.printStackTrace();
-                System.out.println("error found");
-            }
-
-        } else{
-            System.out.println("Invalid token or null token");
+        String bearerToken = request.getHeader("Authorization");
+        if (!StringUtils.hasText(bearerToken) || !bearerToken.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        //validated
-        if(username!=null && SecurityContextHolder.getContext().getAuthentication()==null){
+        String jwtToken = bearerToken.substring(7);
+        String username = null;
 
-            final UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(username);
-            if(jwtUtils.validateToken(jwtToken,userDetails)){
-                //token is valid
+        try {
+            username = jwtUtils.extractUsername(jwtToken);
+        } catch (ExpiredJwtException exception) {
+            LOGGER.debug("JWT token expired", exception);
+        } catch (JwtException | IllegalArgumentException exception) {
+            LOGGER.debug("Invalid JWT token", exception);
+        }
 
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(userDetails,null,userDetails.getAuthorities());
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+            if (jwtUtils.validateToken(jwtToken, userDetails)) {
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
-
-            }else{
-                System.out.println("token is not valid");
             }
-
-
         }
-        filterChain.doFilter(request,response);
 
+        filterChain.doFilter(request, response);
     }
-
 }

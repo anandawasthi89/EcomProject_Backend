@@ -1,0 +1,1063 @@
+{
+  "info": {
+    "_postman_id": "0d0ef691-bc31-44e5-a8b3-d684a90d7d6f",
+    "name": "Ecommerce Backend API",
+    "description": "Rerunnable Postman collection for the Spring Boot e-commerce backend API. Initializes unique test users on each run, exercises public and protected endpoints, covers negative cases, tests legacy aliases, and performs cleanup at the end.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Setup And Health",
+      "item": [
+        {
+          "name": "GET Root Health And Initialize Run Variables",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var seed = Date.now().toString();",
+                  "pm.collectionVariables.set('runSeed', seed);",
+                  "pm.collectionVariables.set('primaryEmail', 'alice+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('primaryPassword', 'password123');",
+                  "pm.collectionVariables.set('primaryUpdatedEmail', 'alice.updated+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('primaryUpdatedPassword', 'newpassword123');",
+                  "pm.collectionVariables.set('registeredEmail', 'bob+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('registeredPassword', 'password123');",
+                  "pm.collectionVariables.set('registeredUpdatedEmail', 'bob.updated+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('aliasEmail', 'cara+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('aliasPassword', 'password123');",
+                  "pm.collectionVariables.set('token', '');",
+                  "pm.collectionVariables.set('legacyToken', '');",
+                  "pm.collectionVariables.set('userId', '');",
+                  "pm.collectionVariables.set('registeredUserId', '');",
+                  "",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Service health payload is valid', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.service).to.eql('ecommerce-backend');",
+                  "    pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Initializes fresh unique variables for the run and verifies that the API is reachable."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 Public User Onboarding",
+      "item": [
+        {
+          "name": "POST Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('userId', String(json.id));",
+                  "",
+                  "pm.test('Created user payload contains id and expected email', function () {",
+                  "    pm.expect(json.id).to.exist;",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('primaryEmail'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"{{primaryPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Primary public user creation endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('registeredUserId', String(json.id));",
+                  "",
+                  "pm.test('Registered user payload contains expected email', function () {",
+                  "    pm.expect(json.id).to.exist;",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('registeredEmail'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": null,\n  \"name\": \"Bob\",\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
+            },
+            "description": "Alternative public registration endpoint."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Authentication",
+      "item": [
+        {
+          "name": "POST Generate Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('token', json.token);",
+                  "",
+                  "pm.test('Token is present', function () {",
+                  "    pm.expect(json.token).to.be.a('string');",
+                  "    pm.expect(json.token.length).to.be.greaterThan(20);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"{{primaryPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Generate JWT using the primary authentication endpoint."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Protected Endpoints",
+      "item": [
+        {
+          "name": "GET All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Returns all users. Requires JWT authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Current user email matches login user', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('primaryEmail'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Returns the currently authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('primaryEmail', json.email);",
+                  "pm.collectionVariables.set('primaryPassword', pm.collectionVariables.get('primaryUpdatedPassword'));",
+                  "",
+                  "pm.test('Updated user payload is correct', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('userId')));",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('primaryUpdatedEmail'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{userId}},\n  \"name\": \"Alice Updated\",\n  \"email\": \"{{primaryUpdatedEmail}}\",\n  \"password\": \"{{primaryUpdatedPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Updates the primary test user. Collection variables are updated for subsequent authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Token After Update",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('token', json.token);",
+                  "",
+                  "pm.test('Updated credentials return a token', function () {",
+                  "    pm.expect(json.token).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"{{primaryPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Generates a fresh token after updating the primary user's email and password."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Negative Cases",
+      "item": [
+        {
+          "name": "POST Invalid Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Error message is correct', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Invalid email or password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Invalid credentials should return 401."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Invalid Create Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Validation response contains email and password errors', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Validation failed');",
+                  "    pm.expect(json.errors.email).to.exist;",
+                  "    pm.expect(json.errors.password).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Malformed email and too-short password should fail validation."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Protected Route Without Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Unauthorized message is returned', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Protected route without a Bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Duplicate Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Conflict message is returned', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Email already registered');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob Again\",\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Attempts to create an already-registered email."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Missing User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Not found message is returned', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('User not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 9999,\n  \"name\": \"Missing User\",\n  \"email\": \"missing@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/9999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "9999"
+              ]
+            },
+            "description": "Updating a missing user should return 404."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Missing User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Not found message is returned', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('User not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/9999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "9999"
+              ]
+            },
+            "description": "Deleting a missing user should return 404."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Legacy Alias Endpoints",
+      "item": [
+        {
+          "name": "POST Create User Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cara\",\n  \"email\": \"{{aliasEmail}}\",\n  \"password\": \"{{aliasPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/Users/addUser",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "Users",
+                "addUser"
+              ]
+            },
+            "description": "Legacy alias for public user creation."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Token Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('legacyToken', json.token);",
+                  "",
+                  "pm.test('Legacy token is present', function () {",
+                  "    pm.expect(json.token).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/generateToken",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "generateToken"
+              ]
+            },
+            "description": "Legacy alias for JWT generation."
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Users Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/AllUsers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "AllUsers"
+              ]
+            },
+            "description": "Legacy alias for listing all users."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Current User Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/currentuser",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "currentuser"
+              ]
+            },
+            "description": "Legacy alias for current authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('registeredEmail', json.email);",
+                  "",
+                  "pm.test('Legacy update returns the expected registered user id', function () {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('registeredUserId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{registeredUserId}},\n  \"name\": \"Bob Updated\",\n  \"email\": \"{{registeredUpdatedEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/UpdateExistingUser",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "UpdateExistingUser"
+              ]
+            },
+            "description": "Legacy alias for update. Uses body id because the alias path has no path variable."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 Cleanup",
+      "item": [
+        {
+          "name": "DELETE Registered User Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/deleteUser/{{registeredUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "deleteUser",
+                "{{registeredUserId}}"
+              ]
+            },
+            "description": "Deletes the registered user using the legacy delete alias."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Primary User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Deletes the main created test user at the very end of the collection."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9005"
+    },
+    {
+      "key": "runSeed",
+      "value": ""
+    },
+    {
+      "key": "primaryEmail",
+      "value": ""
+    },
+    {
+      "key": "primaryPassword",
+      "value": ""
+    },
+    {
+      "key": "primaryUpdatedEmail",
+      "value": ""
+    },
+    {
+      "key": "primaryUpdatedPassword",
+      "value": ""
+    },
+    {
+      "key": "registeredEmail",
+      "value": ""
+    },
+    {
+      "key": "registeredPassword",
+      "value": ""
+    },
+    {
+      "key": "registeredUpdatedEmail",
+      "value": ""
+    },
+    {
+      "key": "aliasEmail",
+      "value": ""
+    },
+    {
+      "key": "aliasPassword",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "legacyToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "registeredUserId",
+      "value": ""
+    }
+  ]
+}

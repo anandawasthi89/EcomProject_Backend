@@ -4,7 +4,7 @@ public class UserJWTResponse {
 
     private String token;
 
-    public UserJWTResponse(){}
+    public UserJWTResponse() {}
 
     public UserJWTResponse(String token) {
         this.token = token;

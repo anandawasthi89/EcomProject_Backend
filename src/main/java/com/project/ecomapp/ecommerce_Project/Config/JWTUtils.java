@@ -1,11 +1,16 @@
 package com.project.ecomapp.ecommerce_Project.Config;
 
-import org.springframework.stereotype.Component;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +19,16 @@ import java.util.function.Function;
 @Component
 public class JWTUtils {
 
-    private String SECRET_KEY = "secret";
+    private final SecretKey signingKey;
+    private final long expirationInMillis;
+
+    public JWTUtils(
+            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.jwt.expiration-ms:36000000}") long expirationInMillis
+    ) {
+        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        this.expirationInMillis = expirationInMillis;
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -25,14 +39,19 @@ public class JWTUtils {
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
+        Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
+
     private Claims extractAllClaims(String token) {
-        return Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+        Jws<Claims> claims = Jwts.parserBuilder()
+                .setSigningKey(signingKey)
+                .build()
+                .parseClaimsJws(token);
+        return claims.getBody();
     }
 
-    private Boolean isTokenExpired(String token) {
+    private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
@@ -42,15 +61,18 @@ public class JWTUtils {
     }
 
     private String createToken(Map<String, Object> claims, String subject) {
-
-        return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY).compact();
+        Date now = new Date();
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + expirationInMillis))
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
+    public boolean validateToken(String token, UserDetails userDetails) {
+        String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
-
 }

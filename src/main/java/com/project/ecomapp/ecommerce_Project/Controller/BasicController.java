@@ -1,14 +1,16 @@
 package com.project.ecomapp.ecommerce_Project.Controller;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
-@CrossOrigin("*")
 public class BasicController {
 
     @GetMapping(path = "/")
-    public String getHome(){ return  "Homepge";}
+    public Map<String, String> getHome() {
+        return Map.of("service", "ecommerce-backend", "status", "ok");
+    }
 
 }

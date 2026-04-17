@@ -9,15 +9,17 @@ import java.util.Collections;
 
 public class CustomUserDetails implements UserDetails {
 
-    private User user;
-    public CustomUserDetails (User user){
-        super();
-        this.user=user;
+    private static final String ROLE_USER = "ROLE_USER";
+
+    private final User user;
+
+    public CustomUserDetails(User user) {
+        this.user = user;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority(user.getEmail()));
+        return Collections.singleton(new SimpleGrantedAuthority(ROLE_USER));
     }
 
     @Override
