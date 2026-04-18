@@ -1,0 +1,39 @@
+services:
+  postgres-prod:
+    image: postgres:16
+    container_name: ecommerce-postgres-prod
+    environment:
+      POSTGRES_DB: ecommerce_prod
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app-prod:
+    build:
+      context: .
+    container_name: ecommerce-app-prod
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    env_file:
+      - .env.template
+      - .env.prod.template
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      PROD_DB_URL: jdbc:postgresql://postgres-prod:5432/ecommerce_prod
+      PROD_DB_USERNAME: postgres
+      PROD_DB_PASSWORD: postgres
+      PROD_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "9006:9005"
+
+volumes:
+  postgres-prod-data:

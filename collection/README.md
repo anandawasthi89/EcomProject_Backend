@@ -2,6 +2,8 @@
 
 This folder contains import-ready Postman artifacts for testing the backend in the `dev` environment.
 
+For the easiest local demo flow, start the Compose development stack first and then import these files into Postman.
+
 ## Files
 
 - `Ecommerce Backend API.postman_collection.json`: full request collection
@@ -27,4 +29,4 @@ This folder contains import-ready Postman artifacts for testing the backend in t
 - User creation and registration requests automatically store `userId`, `registeredUserId`, and the active user email.
 - Protected requests use `Authorization: Bearer {{token}}`.
 - Default base URL is `http://localhost:9005`.
-
+- The collection pairs well with Adminer on `http://localhost:8080` when you want to inspect the resulting database rows during a demo.

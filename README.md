@@ -2,14 +2,18 @@
 
 Spring Boot 2.7 backend for user registration, JWT-based authentication, and protected user management endpoints.
 
-This repository is structured as a small, production-minded REST API:
+This repository is designed as a portfolio-ready backend module that can sit behind a storefront, admin panel, or broader e-commerce platform. It demonstrates application-layer security, profile-driven configuration, containerized local infrastructure, and CI validation in a compact but production-minded codebase.
 
-- Stateless JWT authentication
-- PostgreSQL persistence with Spring Data JPA
-- Bean validation for request payloads
-- Centralized JSON error handling
-- Environment-based configuration for `dev` and `prod`
-- Automated tests with JaCoCo coverage reporting
+## Portfolio Highlights
+
+- Stateless JWT authentication with Spring Security filter-chain integration
+- PostgreSQL persistence with Spring Data JPA and profile-driven datasource configuration
+- Layered architecture with clear separation between controllers, services, repositories, config, and DTO/entity models
+- Validation, business-rule enforcement, and centralized JSON exception handling
+- Dockerized local development stack with PostgreSQL and Adminer for database inspection
+- GitHub Actions CI pipeline with unit tests, packaging, Docker build validation, and profile-based smoke tests
+- Local CI emulation through `act`, so workflows can be exercised before pushing
+- Backward-compatible alias endpoints alongside cleaner REST-style routes
 
 ## Technology Stack
 
@@ -20,8 +24,10 @@ This repository is structured as a small, production-minded REST API:
 - Spring Data JPA
 - PostgreSQL
 - Maven
+- Docker / Docker Compose
 - JUnit 5 / MockMvc / Mockito
 - JaCoCo
+- GitHub Actions / `act`
 
 ## Features
 
@@ -30,6 +36,8 @@ This repository is structured as a small, production-minded REST API:
 - JWT token issuance for valid credentials
 - Protected endpoints for listing users, reading the current user, updating users, and deleting users
 - Validation and business-rule errors returned as consistent JSON responses
+- Local dev stack with containerized PostgreSQL and browser-based DB inspection via Adminer
+- CI smoke testing for both `dev` and `prod` application profiles
 
 ## Project Structure
 
@@ -45,7 +53,9 @@ This repository is structured as a small, production-minded REST API:
 ├── src/main/resources # Profile-specific application properties
 ├── src/test/java      # Controller, service, config, and model tests
 ├── docs/              # API, architecture, and operations docs
-├── .env.template      # Example environment configuration
+├── docker-compose.*   # Local dev/prod-like runtime stacks
+├── Dockerfile         # Multi-stage image build
+├── .env.template      # Shared environment configuration
 └── pom.xml
 ```
 
@@ -73,18 +83,49 @@ Detailed request and response examples are documented in [docs/API.md](docs/API.
 ### 1. Prerequisites
 
 - Java 17
-- PostgreSQL
 - Maven 3.8+
+- Docker Desktop or Docker Engine if you want the containerized stack
 
-### 2. Configure environment
+### 2. Fastest local start: Docker Compose
 
-Copy the sample environment file and set values appropriate for your machine:
+Development stack:
 
 ```bash
-cp .env.template .env
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-At minimum for local development:
+This brings up:
+
+- API at `http://localhost:9005`
+- PostgreSQL at `localhost:5432`
+- Adminer at `http://localhost:8080`
+
+Production-style local stack:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+
+This brings up:
+
+- API at `http://localhost:9006`
+- PostgreSQL at `localhost:5433`
+
+### 3. Run directly with Maven
+
+If you want to run the app outside Docker, create a root `.env` file from the shared template and the matching profile template:
+
+```bash
+cat .env.template .env.dev.template > .env
+```
+
+For a production-style local run:
+
+```bash
+cat .env.template .env.prod.template > .env
+```
+
+At minimum for local JVM development:
 
 - `SPRING_PROFILES_ACTIVE=dev`
 - `DEV_DB_URL`
@@ -97,7 +138,7 @@ Notes:
 - `DEV_JWT_SECRET` and `PROD_JWT_SECRET` must be Base64-encoded keys suitable for HMAC signing.
 - Production credentials are intentionally externalized and must not be committed.
 
-### 3. Start the application
+Start the application:
 
 With Maven:
 
@@ -112,6 +153,8 @@ mvn spring-boot:run
 ```
 
 The service starts on `http://localhost:9005` unless `SERVER_PORT` is overridden.
+
+The application can auto-read a project-root `.env` file before Spring Boot starts. Docker Compose does not require a root `.env` because the compose files inject the relevant template values directly.
 
 ## Configuration
 
@@ -133,6 +176,7 @@ Important environment variables:
 | `DEV_DB_URL` / `PROD_DB_URL` | JDBC URL |
 | `DEV_DB_USERNAME` / `PROD_DB_USERNAME` | Database username |
 | `DEV_DB_PASSWORD` / `PROD_DB_PASSWORD` | Database password |
+| `DEV_HIBERNATE_DDL_AUTO` / `PROD_HIBERNATE_DDL_AUTO` | Optional profile-specific schema mode override |
 | `DEV_CORS_ALLOWED_ORIGINS` / `PROD_CORS_ALLOWED_ORIGINS` | Allowed frontend origins |
 | `DEV_JWT_SECRET` / `PROD_JWT_SECRET` | Base64 JWT signing secret |
 
@@ -192,11 +236,22 @@ target/site/jacoco/index.html
 
 Testing notes are documented in [src/test/README.md](src/test/README.md).
 
+## Local CI
+
+Run the GitHub Actions workflow locally with `act`:
+
+```bash
+act pull_request -W .github/workflows/ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+Local CI notes are documented in [docs/LOCAL_CI.md](docs/LOCAL_CI.md).
+
 ## Documentation Index
 
 - [docs/README.md](docs/README.md)
 - [docs/API.md](docs/API.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/LOCAL_CI.md](docs/LOCAL_CI.md)
 - [docs/OPERATIONS.md](docs/OPERATIONS.md)
 - [SECURITY.md](SECURITY.md)
 
@@ -205,5 +260,5 @@ Testing notes are documented in [src/test/README.md](src/test/README.md).
 - Keep endpoint behavior explicit and backward compatible when possible.
 - Return predictable JSON payloads for both success and failure scenarios.
 - Prefer configuration through environment variables over hardcoded secrets.
+- Keep the project easy to demo locally with Docker Compose and inspectable infrastructure.
 - Add tests for behavioral changes before merging.
-

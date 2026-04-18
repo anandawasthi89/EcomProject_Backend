@@ -1,10 +1,13 @@
 # API Reference
 
-Base URL: `http://localhost:9005`
+Default local base URL: `http://localhost:9005`
+
+Production-style local Docker base URL: `http://localhost:9006`
 
 ## Authentication Model
 
 - Public endpoints can be called without a token.
+- JWTs are stateless and are not stored in the database.
 - Protected endpoints require:
 
 ```http
@@ -258,12 +261,11 @@ Examples:
 
 | Code | Meaning |
 | --- | --- |
-| `200` | Successful request |
-| `201` | Resource created |
-| `204` | Resource deleted |
-| `400` | Validation or bad request |
-| `401` | Authentication required or invalid credentials |
+| `200` | Successful read or token generation |
+| `201` | User created successfully |
+| `204` | User deleted successfully |
+| `400` | Validation failed |
+| `401` | Authentication failed or token missing/invalid |
 | `404` | Resource not found |
-| `409` | Conflict such as duplicate email |
+| `409` | Business conflict such as duplicate email |
 | `500` | Internal server error |
-

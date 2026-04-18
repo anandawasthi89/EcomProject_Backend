@@ -10,6 +10,12 @@ The application is organized as a conventional Spring Boot layered API:
 - `Config`: authentication, JWT processing, password encoder, and CORS setup
 - `Bean`: entity and DTO models
 
+Around that application core, the repository also includes:
+
+- a multi-stage `Dockerfile` for container image builds
+- Docker Compose stacks for local `dev` and local `prod`-style execution
+- a GitHub Actions workflow that tests, packages, smoke-tests, and validates Docker builds
+
 ## Request Flow
 
 ### Public registration
@@ -65,6 +71,8 @@ The current persistence model is intentionally small:
 
 Email is unique and normalized to lowercase trimmed form before persistence or lookup.
 
+JWT tokens are not persisted. Authentication is stateless once a token has been issued.
+
 ## Error Handling
 
 `ApiExceptionHandler` centralizes:
@@ -83,6 +91,12 @@ Configuration is profile-driven:
 - `application-dev.properties`: development overrides
 - `application-prod.properties`: production placeholders backed by environment variables
 
+For local demos, the repository also provides:
+
+- `.env.template` for shared runtime settings
+- `.env.dev.template` and `.env.prod.template` for profile-specific variables
+- `docker-compose.dev.yml` and `docker-compose.prod.yml` for containerized execution
+
 Important operational values include:
 
 - datasource URL and credentials
@@ -98,4 +112,4 @@ Important operational values include:
 - Business rules stay out of controllers
 - DTOs separate external contract from persistence
 - Test coverage can target each layer independently
-
+- The project can be demonstrated quickly with Compose while still reflecting production-style concerns such as profiles, secrets, and CI validation
