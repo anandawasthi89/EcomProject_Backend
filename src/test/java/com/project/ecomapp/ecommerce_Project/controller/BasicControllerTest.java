@@ -2,7 +2,7 @@ package com.project.ecomapp.ecommerce_Project.controller;
 
 import com.project.ecomapp.ecommerce_Project.Config.JWTUtils;
 import com.project.ecomapp.ecommerce_Project.Controller.BasicController;
-import com.project.ecomapp.ecommerce_Project.Services.CustomUserDetailsService;
+import com.project.ecomapp.ecommerce_Project.user.service.CustomUserDetailsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

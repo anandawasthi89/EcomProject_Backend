@@ -2,12 +2,13 @@ package com.project.ecomapp.ecommerce_Project.config;
 
 import com.project.ecomapp.ecommerce_Project.Bean.CustomUserDetails;
 import com.project.ecomapp.ecommerce_Project.Bean.User;
+import com.project.ecomapp.ecommerce_Project.Bean.UserRole;
 import com.project.ecomapp.ecommerce_Project.Config.JWTAuthenticationEntryPoint;
 import com.project.ecomapp.ecommerce_Project.Config.JWTAuthenticationFilter;
 import com.project.ecomapp.ecommerce_Project.Config.JWTUtils;
 import com.project.ecomapp.ecommerce_Project.Config.PasswordConfiguration;
 import com.project.ecomapp.ecommerce_Project.Config.SecurityConfiguration;
-import com.project.ecomapp.ecommerce_Project.Services.CustomUserDetailsService;
+import com.project.ecomapp.ecommerce_Project.user.service.CustomUserDetailsService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockFilterChain;
@@ -55,7 +56,7 @@ class ConfigUnitTest {
     void jwtUtilsGeneratesAndValidatesToken() {
         String secret = Base64.getEncoder().encodeToString("01234567890123456789012345678901".getBytes());
         JWTUtils jwtUtils = new JWTUtils(secret, 60000);
-        User user = new User("Alice", "alice@example.com", "encoded");
+        User user = new User("Alice", "alice@example.com", "encoded", UserRole.ADMIN);
         UserDetails userDetails = new CustomUserDetails(user);
 
         String token = jwtUtils.generateToken(userDetails);
@@ -179,6 +180,30 @@ class ConfigUnitTest {
     }
 
     @Test
+    void jwtFilterRejectsDisabledUserEvenWithValidToken() throws ServletException, IOException {
+        CustomUserDetailsService userDetailsService = mock(CustomUserDetailsService.class);
+        JWTUtils jwtUtils = mock(JWTUtils.class);
+        JWTAuthenticationFilter filter = new JWTAuthenticationFilter(userDetailsService, jwtUtils);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
+
+        User user = new User("Alice", "alice@example.com", "encoded");
+        user.setActive(false);
+        UserDetails userDetails = new CustomUserDetails(user);
+
+        when(jwtUtils.extractUsername("valid-token")).thenReturn("alice@example.com");
+        when(userDetailsService.loadUserByUsername("alice@example.com")).thenReturn(userDetails);
+
+        SecurityContextHolder.clearContext();
+        filter.doFilter(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(jwtUtils, never()).validateToken(any(), any());
+    }
+
+    @Test
     void securityConfigurationBuildsProviderAndAuthenticationManager() throws Exception {
         JWTAuthenticationEntryPoint entryPoint = mock(JWTAuthenticationEntryPoint.class);
         JWTAuthenticationFilter filter = mock(JWTAuthenticationFilter.class);
@@ -197,7 +222,7 @@ class ConfigUnitTest {
         ArgumentCaptor<org.springframework.security.authentication.UsernamePasswordAuthenticationToken> captor =
                 ArgumentCaptor.forClass(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.class);
         when(userDetailsService.loadUserByUsername("alice@example.com")).thenReturn(
-                new CustomUserDetails(new User("Alice", "alice@example.com", "encoded"))
+                new CustomUserDetails(new User("Alice", "alice@example.com", "encoded", UserRole.CUSTOMER))
         );
         when(passwordEncoder.matches("password123", "encoded")).thenReturn(true);
 

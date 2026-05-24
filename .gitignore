@@ -7,6 +7,7 @@ target/
 .env
 .env.*
 !.env.template
+KT/
 
 ### STS ###
 .apt_generated

@@ -1,6 +1,6 @@
 package com.project.ecomapp.ecommerce_Project.Config;
 
-import com.project.ecomapp.ecommerce_Project.Services.CustomUserDetailsService;
+import com.project.ecomapp.ecommerce_Project.user.service.CustomUserDetailsService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import org.slf4j.Logger;
@@ -53,11 +53,13 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-            if (jwtUtils.validateToken(jwtToken, userDetails)) {
+            if (userDetails.isEnabled() && jwtUtils.validateToken(jwtToken, userDetails)) {
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            } else if (!userDetails.isEnabled()) {
+                LOGGER.warn("Rejected JWT authentication for disabled user email={}", username);
             }
         }
 

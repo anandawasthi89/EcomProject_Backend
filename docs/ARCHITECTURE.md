@@ -1,115 +1,160 @@
 # Architecture
 
-## Overview
+## System Shape
 
-The application is organized as a conventional Spring Boot layered API:
+The application is a single Spring Boot service with clear internal boundaries:
 
-- `Controller`: HTTP boundary and request/response handling
-- `Services`: business logic, normalization, conflict checks, password hashing
-- `Repository`: persistence abstraction via Spring Data JPA
-- `Config`: authentication, JWT processing, password encoder, and CORS setup
-- `Bean`: entity and DTO models
+- `user.*`: identity, authentication support, role-based user management
+- `library.*`: catalog, reservations, likes, favorites, access history, and lending rules
+- `Config`: security and runtime infrastructure
+- `Bean`: entities, DTOs, enums, and the `UserDetails` wrapper
+- `Controller`: shared endpoints such as health and exception handling
 
-Around that application core, the repository also includes:
+This keeps deployment simple while preventing the main domains from collapsing into one large service layer.
 
-- a multi-stage `Dockerfile` for container image builds
-- Docker Compose stacks for local `dev` and local `prod`-style execution
-- a GitHub Actions workflow that tests, packages, smoke-tests, and validates Docker builds
+## High-Level Flow
 
-## Request Flow
+### Authentication
 
-### Public registration
+1. Client sends email and password to `user.controller.AuthenticatorController`
+2. `AuthenticationManager` validates credentials
+3. `JWTUtils` generates an HMAC-signed token
+4. Client uses the token as a Bearer credential on protected routes
 
-1. Request enters `UserController`
-2. Bean validation runs on the request DTO
-3. `CustomUserDetailsService.addNewUser(...)` normalizes email and hashes the password
-4. `UserRepDAO` persists the user
-5. `UserResponse` is returned to the client
+### Authorization
 
-### Authenticated request
+1. `JWTAuthenticationFilter` extracts and validates the token
+2. `user.service.CustomUserDetailsService` loads the user
+3. `CustomUserDetails` exposes role and authority data
+4. Spring Security populates the security context
+5. `@PreAuthorize` and service-level checks enforce route and business rules
 
-1. Client sends a Bearer token
-2. `JWTAuthenticationFilter` extracts and validates the JWT
-3. `CustomUserDetailsService.loadUserByUsername(...)` loads the user
-4. Spring Security stores the authenticated principal in the security context
-5. Protected controller endpoint executes
+### User lifecycle
 
-## Authentication Design
+1. Request enters `user.controller.UserController` or `user.controller.IamController`
+2. Bean validation runs on the request payload
+3. `user.service.CustomUserDetailsService` applies normalization and business rules
+4. `user.repository.UserRepDAO` persists changes
+5. DTO responses are returned
 
-### Token issuance
+### Library lifecycle
 
-- `AuthenticatorController` accepts email/password
-- `AuthenticationManager` verifies credentials
-- `JWTUtils` creates an HMAC-signed JWT
+1. Request enters `library.controller.BookController`
+2. Spring Security verifies access
+3. `library.service.LibraryService` applies stock, role, reservation, and overdue rules
+4. `library.repository.*` persists book, history, favorite, like, and reservation changes
+5. Response DTOs expose the relevant domain result
 
-### Token verification
+## Authorization Model
 
-- `JWTAuthenticationFilter` reads `Authorization`
-- `JWTUtils.extractUsername(...)` parses the token
-- `JWTUtils.validateToken(...)` verifies username and expiration
-- Valid tokens populate the Spring Security context
+Roles:
 
-### Entry point behavior
+- `ADMIN`
+- `MANAGER`
+- `CUSTOMER`
+- `CUSTOMER_WITH_READ_ALLOWED`
 
-Unauthenticated access to protected routes is handled by `JWTAuthenticationEntryPoint`, which returns:
+The system uses two layers of control:
 
-```json
-{
-  "message": "Unauthorized"
-}
-```
+- route and method security through Spring Security
+- service-level target validation for business-sensitive cases
+
+Examples:
+
+- only `ADMIN` can list all users
+- `MANAGER` can manage customer-tier users but not privileged accounts
+- only `CUSTOMER_WITH_READ_ALLOWED` can take physical books home
+- both customer tiers can use ebook and in-store reading flows
 
 ## Persistence Model
 
-The current persistence model is intentionally small:
+### User domain
 
 - `User`
-  - `id`
-  - `name`
-  - `email`
-  - `password`
+  - identity and credential fields
+  - role
+  - address/contact fields
+  - `flagged` state for overdue review workflows
+  - `active` state for account deactivation and JWT rejection
 
-Email is unique and normalized to lowercase trimmed form before persistence or lookup.
+### Library domain
 
-JWT tokens are not persisted. Authentication is stateless once a token has been issued.
+- `Book`
+  - catalog metadata
+  - physical stock quantity
+  - ebook availability
+  - in-store reading availability
+  - archive flag
+- `BookLike`
+- `BookFavorite`
+- `BookAccessHistory`
+- `BookReservation`
+
+The current model intentionally separates customer interaction data from the main book entity so engagement and lending behavior can grow independently.
+
+## Lending Rules
+
+- reservations are for physical books only
+- reservations consume physical availability logically until returned or fulfilled
+- one user cannot hold two simultaneous active allocations for the same book
+- physical checkout is limited to `CUSTOMER_WITH_READ_ALLOWED`
+- maximum 3 active physical take-home books per eligible user
+- due date is 1 month from checkout
+- checkout creates or reuses the reservation allocation for that user
+- returning a checked-out book also completes the linked reservation lifecycle
+- ebook and in-store reading are available to both customer tiers
+- overdue users are flagged through explicit admin or manager scan-and-resolution flows
 
 ## Error Handling
 
-`ApiExceptionHandler` centralizes:
+`Controller.ApiExceptionHandler` centralizes:
 
-- validation errors
-- `ResponseStatusException` responses
-- generic exception fallback
+- validation failures
+- `ResponseStatusException` handling
+- access-denied responses
+- fallback internal errors
 
-This keeps controller code small and produces a predictable JSON response format.
+This keeps controller logic focused on orchestration rather than response construction.
 
-## Configuration Model
+## Configuration and Profiles
 
-Configuration is profile-driven:
+Runtime behavior is profile-driven:
 
 - `application.properties`: shared defaults
-- `application-dev.properties`: development overrides
-- `application-prod.properties`: production placeholders backed by environment variables
+- `application-dev.properties`: development-specific overrides
+- `application-prod.properties`: production-oriented overrides backed by environment variables
 
-For local demos, the repository also provides:
+Environment values control:
 
-- `.env.template` for shared runtime settings
-- `.env.dev.template` and `.env.prod.template` for profile-specific variables
-- `docker-compose.dev.yml` and `docker-compose.prod.yml` for containerized execution
-
-Important operational values include:
-
-- datasource URL and credentials
+- datasource connection
 - JWT secret
 - token lifetime
 - password hash strength
-- allowed CORS origins
+- CORS origins
+- Hibernate DDL mode
 
-## Why This Structure Works
+## Logging and Troubleshooting
 
-- Small codebase stays readable
-- Security concerns are isolated in `Config`
-- Business rules stay out of controllers
-- DTOs separate external contract from persistence
-- Test coverage can target each layer independently
-- The project can be demonstrated quickly with Compose while still reflecting production-style concerns such as profiles, secrets, and CI validation
+Application logs are present at:
+
+- startup and CORS initialization
+- JWT parsing and auth failures
+- unauthorized and forbidden requests
+- validation and exception boundaries
+- user-management writes
+- catalog changes
+- customer book interactions
+- reservations, checkouts, returns, and overdue flagging
+- forced returns, duration extensions, and account deactivation
+
+The intent is practical traceability rather than verbose request dumping.
+
+## Why This Design Fits the Current Stage
+
+- one deployable unit keeps setup and operations straightforward
+- modular packages keep IAM and lending logic isolated
+- PostgreSQL gives stable relational modeling for roles, catalog, and histories
+- containerized runtime makes the system easy to run locally
+- CI validates more than just unit tests by smoke-testing both runtime profiles
+
+If the platform expands later, `user` and `library` are the natural boundaries for extraction into separate services.

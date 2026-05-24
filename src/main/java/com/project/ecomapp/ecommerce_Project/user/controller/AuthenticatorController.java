@@ -1,12 +1,15 @@
-package com.project.ecomapp.ecommerce_Project.Controller;
+package com.project.ecomapp.ecommerce_Project.user.controller;
 
 import com.project.ecomapp.ecommerce_Project.Bean.UserJWTRequest;
 import com.project.ecomapp.ecommerce_Project.Bean.UserJWTResponse;
 import com.project.ecomapp.ecommerce_Project.Config.JWTUtils;
-import com.project.ecomapp.ecommerce_Project.Services.CustomUserDetailsService;
+import com.project.ecomapp.ecommerce_Project.user.service.CustomUserDetailsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +23,8 @@ import javax.validation.Valid;
 @RestController
 @Validated
 public class AuthenticatorController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticatorController.class);
 
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService customUserDetailsService;
@@ -40,6 +45,7 @@ public class AuthenticatorController {
         authenticate(jwtRequest.getEmail(), jwtRequest.getPassword());
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(jwtRequest.getEmail());
         String token = jwtUtils.generateToken(userDetails);
+        LOGGER.info("Issued JWT token for email={}", jwtRequest.getEmail());
         return ResponseEntity.ok(new UserJWTResponse(token));
     }
 
@@ -47,6 +53,14 @@ public class AuthenticatorController {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         } catch (BadCredentialsException exception) {
+            LOGGER.warn("Failed login attempt for email={}", username);
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password",
+                    exception
+            );
+        } catch (AuthenticationException exception) {
+            LOGGER.warn("Failed login attempt for email={}", username);
             throw new org.springframework.web.server.ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Invalid email or password",

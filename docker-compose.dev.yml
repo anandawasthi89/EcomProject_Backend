@@ -1,47 +1,31 @@
 services:
-  postgres-dev:
-    image: postgres:16
-    container_name: ecommerce-postgres-dev
-    environment:
-      POSTGRES_DB: ecommerce_dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-dev-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_dev"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app-dev:
     build:
       context: .
     container_name: ecommerce-app-dev
-    depends_on:
-      postgres-dev:
-        condition: service_healthy
     env_file:
       - .env.template
       - .env.dev.template
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      DEV_DB_URL: jdbc:postgresql://postgres-dev:5432/ecommerce_dev
+      DEV_DB_URL: jdbc:postgresql://host.docker.internal:5432/ecommerce_dev
       DEV_DB_USERNAME: postgres
       DEV_DB_PASSWORD: postgres
+      SPRING_REDIS_HOST: redis-cache
+      SPRING_REDIS_PORT: 6379
     ports:
       - "9005:9005"
+    depends_on:
+      - redis-cache
+
+  redis-cache:
+    image: redis:7
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
 
   adminer:
     image: adminer:4
     container_name: ecommerce-adminer
-    depends_on:
-      postgres-dev:
-        condition: service_healthy
     ports:
       - "8080:8080"
-
-volumes:
-  postgres-dev-data:

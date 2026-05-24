@@ -1,76 +1,71 @@
 # Local CI with `act`
 
-This repository's GitHub Actions pipeline is designed to run locally with `act` and in GitHub Actions without depending on checked-in `.env` runtime files.
+The GitHub Actions workflow is designed to run locally with `act` and in GitHub Actions without depending on committed runtime secrets.
 
-## What the workflow covers
+## Workflow Coverage
 
-- unit tests
-- JAR packaging
+The CI pipeline validates:
+
+- unit and controller tests
+- application packaging
 - startup smoke test for `dev`
 - startup smoke test for `prod`
 - Docker image build
 
-The smoke test provisions a temporary PostgreSQL service automatically, so you do not need your local database running to validate the workflow.
-
-The smoke job starts the application and verifies health within the same workflow step. That is intentional: it avoids background-process lifecycle issues that can appear when running GitHub Actions locally through `act`.
-
-For local runtime outside Actions, use:
-
-- `docker-compose.dev.yml` for the `dev` profile
-- `docker-compose.prod.yml` for the `prod` profile
+The smoke-test job provisions PostgreSQL dynamically and starts the application inside the workflow run, so local CI exercises both profiles in a runtime-like environment.
 
 ## Prerequisites
 
 - Docker
 - `act`
 
-Recommended image mapping for better compatibility with `ubuntu-latest`:
+Recommended image mapping:
 
 ```bash
 act -P ubuntu-latest=catthehacker/ubuntu:act-latest
 ```
 
-On Apple Silicon, if you hit image or runtime oddities, prefer:
+On Apple Silicon, if needed:
 
 ```bash
 act -P ubuntu-latest=catthehacker/ubuntu:act-latest --container-architecture linux/amd64
 ```
 
-## Run the full pipeline locally
+## Running the Workflow Locally
 
-For a pull request style run:
+Pull-request style run:
 
 ```bash
 act pull_request -W .github/workflows/ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
 ```
 
-For a push style run:
+Push-style run:
 
 ```bash
 act push -W .github/workflows/ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
 ```
 
-For manual dispatch:
+Manual dispatch:
 
 ```bash
 act workflow_dispatch -W .github/workflows/ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
 ```
 
-To run only the smoke-test job:
+Run only smoke tests:
 
 ```bash
 act pull_request -W .github/workflows/ci.yml -j profile-smoke -P ubuntu-latest=catthehacker/ubuntu:act-latest
 ```
 
-## Run the app locally with Docker Compose
+## Local Runtime Outside Actions
 
-Development:
+Development stack:
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Production-style local run:
+Production-style local stack:
 
 ```bash
 docker compose -f docker-compose.prod.yml up --build
@@ -83,13 +78,13 @@ curl http://localhost:9005/
 curl http://localhost:9006/
 ```
 
-Adminer for DB inspection in dev:
+Adminer in development:
 
 ```text
 http://localhost:8080
 ```
 
-Use these connection details in Adminer:
+Adminer connection values:
 
 - System: `PostgreSQL`
 - Server: `postgres-dev`
@@ -97,16 +92,9 @@ Use these connection details in Adminer:
 - Password: `postgres`
 - Database: `ecommerce_dev`
 
-Notes:
-
-- `dev` maps PostgreSQL to host port `5432` and the app to `9005`
-- `dev` also exposes Adminer on `8080`
-- `prod` maps PostgreSQL to host port `5433` and the app to `9006`
-- the prod compose file sets `PROD_HIBERNATE_DDL_AUTO=update` only for local bootstrapping
-- the application default for real prod is now `validate`
-
 ## Notes
 
-- The workflow smoke-tests both `dev` and `prod` profiles with safe local values.
-- The Docker image is environment-driven. Set `SPRING_PROFILES_ACTIVE` at runtime instead of baking a profile into the image.
-- For real deployment workflows later, add GitHub Environments and inject actual `DEV_*` or `PROD_*` secrets there.
+- the workflow smoke-tests both `dev` and `prod` profiles with safe local values
+- the Docker image is environment-driven; do not bake a fixed Spring profile into the image
+- local Compose runs are the fastest way to inspect runtime behavior, especially alongside Adminer
+- local CI is useful for validating build and profile behavior before pushing changes

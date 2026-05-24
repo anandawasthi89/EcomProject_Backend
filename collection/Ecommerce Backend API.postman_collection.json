@@ -1,16 +1,16 @@
 {
   "info": {
-    "_postman_id": "0d0ef691-bc31-44e5-a8b3-d684a90d7d6f",
+    "_postman_id": "d5b7ee2c-bf6f-4cfd-9f48-7f9f71ef3c30",
     "name": "Ecommerce Backend API",
-    "description": "Rerunnable Postman collection for the Spring Boot e-commerce backend API. Initializes unique test users on each run, exercises public and protected endpoints, covers negative cases, tests legacy aliases, and performs cleanup at the end.",
+    "description": "Rerunnable Postman collection for the Spring Boot IAM and library backend. Covers public onboarding, privileged IAM management, catalog operations, customer interactions, reservation and lending flows, and core negative-path checks.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "01 Setup And Health",
+      "name": "01 Setup",
       "item": [
         {
-          "name": "GET Root Health And Initialize Run Variables",
+          "name": "GET Root Health And Initialize Variables",
           "event": [
             {
               "listen": "test",
@@ -19,19 +19,28 @@
                 "exec": [
                   "var seed = Date.now().toString();",
                   "pm.collectionVariables.set('runSeed', seed);",
-                  "pm.collectionVariables.set('primaryEmail', 'alice+' + seed + '@example.com');",
-                  "pm.collectionVariables.set('primaryPassword', 'password123');",
-                  "pm.collectionVariables.set('primaryUpdatedEmail', 'alice.updated+' + seed + '@example.com');",
-                  "pm.collectionVariables.set('primaryUpdatedPassword', 'newpassword123');",
-                  "pm.collectionVariables.set('registeredEmail', 'bob+' + seed + '@example.com');",
-                  "pm.collectionVariables.set('registeredPassword', 'password123');",
-                  "pm.collectionVariables.set('registeredUpdatedEmail', 'bob.updated+' + seed + '@example.com');",
-                  "pm.collectionVariables.set('aliasEmail', 'cara+' + seed + '@example.com');",
-                  "pm.collectionVariables.set('aliasPassword', 'password123');",
-                  "pm.collectionVariables.set('token', '');",
-                  "pm.collectionVariables.set('legacyToken', '');",
-                  "pm.collectionVariables.set('userId', '');",
-                  "pm.collectionVariables.set('registeredUserId', '');",
+                  "pm.collectionVariables.set('customerEmail', 'customer+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('customerPassword', 'password123');",
+                  "pm.collectionVariables.set('customerUpdatedPassword', 'password456');",
+                  "pm.collectionVariables.set('managedEmail', 'reader+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('managedPassword', 'password123');",
+                  "pm.collectionVariables.set('bootstrapAdminEmail', 'admin@example.com');",
+                  "pm.collectionVariables.set('bootstrapAdminPassword', 'admin12345');",
+                  "pm.collectionVariables.set('bootstrapManagerEmail', 'manager@example.com');",
+                  "pm.collectionVariables.set('bootstrapManagerPassword', 'manager12345');",
+                  "pm.collectionVariables.set('batchOneEmail', 'batch.one+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('batchTwoEmail', 'batch.two+' + seed + '@example.com');",
+                  "pm.collectionVariables.set('bookTitle', 'Library Automation ' + seed);",
+                  "pm.collectionVariables.set('bookIsbn', 'isbn-' + seed);",
+                  "pm.collectionVariables.set('customerToken', '');",
+                  "pm.collectionVariables.set('managerToken', '');",
+                  "pm.collectionVariables.set('adminToken', '');",
+                  "pm.collectionVariables.set('readAllowedToken', '');",
+                  "pm.collectionVariables.set('customerId', '');",
+                  "pm.collectionVariables.set('managedCustomerId', '');",
+                  "pm.collectionVariables.set('batchOneId', '');",
+                  "pm.collectionVariables.set('batchTwoId', '');",
+                  "pm.collectionVariables.set('bookId', '');",
                   "",
                   "pm.test('Status is 200', function () {",
                   "    pm.response.to.have.status(200);",
@@ -57,18 +66,17 @@
               "path": [
                 ""
               ]
-            },
-            "description": "Initializes fresh unique variables for the run and verifies that the API is reachable."
+            }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "02 Public User Onboarding",
+      "name": "02 Public Customer Flow",
       "item": [
         {
-          "name": "POST Create User",
+          "name": "POST Public Register Customer",
           "event": [
             {
               "listen": "test",
@@ -80,11 +88,11 @@
                   "});",
                   "",
                   "var json = pm.response.json();",
-                  "pm.collectionVariables.set('userId', String(json.id));",
+                  "pm.collectionVariables.set('customerId', String(json.id));",
                   "",
-                  "pm.test('Created user payload contains id and expected email', function () {",
-                  "    pm.expect(json.id).to.exist;",
-                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('primaryEmail'));",
+                  "pm.test('Customer registration returns CUSTOMER role', function () {",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('customerEmail'));",
+                  "    pm.expect(json.role).to.eql('CUSTOMER');",
                   "});"
                 ]
               }
@@ -100,7 +108,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"{{primaryPassword}}\"\n}"
+              "raw": "{\n  \"name\": \"Primary Customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users",
@@ -111,68 +119,12 @@
                 "api",
                 "users"
               ]
-            },
-            "description": "Primary public user creation endpoint."
+            }
           },
           "response": []
         },
         {
-          "name": "POST Register User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "var json = pm.response.json();",
-                  "pm.collectionVariables.set('registeredUserId', String(json.id));",
-                  "",
-                  "pm.test('Registered user payload contains expected email', function () {",
-                  "    pm.expect(json.id).to.exist;",
-                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('registeredEmail'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": null,\n  \"name\": \"Bob\",\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/users/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "register"
-              ]
-            },
-            "description": "Alternative public registration endpoint."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "03 Authentication",
-      "item": [
-        {
-          "name": "POST Generate Token",
+          "name": "POST Customer Login",
           "event": [
             {
               "listen": "test",
@@ -184,9 +136,9 @@
                   "});",
                   "",
                   "var json = pm.response.json();",
-                  "pm.collectionVariables.set('token', json.token);",
+                  "pm.collectionVariables.set('customerToken', json.token);",
                   "",
-                  "pm.test('Token is present', function () {",
+                  "pm.test('Customer token is present', function () {",
                   "    pm.expect(json.token).to.be.a('string');",
                   "    pm.expect(json.token.length).to.be.greaterThan(20);",
                   "});"
@@ -204,7 +156,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"{{primaryPassword}}\"\n}"
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/token",
@@ -216,59 +168,12 @@
                 "auth",
                 "token"
               ]
-            },
-            "description": "Generate JWT using the primary authentication endpoint."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "04 Protected Endpoints",
-      "item": [
-        {
-          "name": "GET All Users",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response is an array', function () {",
-                  "    pm.expect(pm.response.json()).to.be.an('array');",
-                  "});"
-                ]
-              }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users"
-              ]
-            },
-            "description": "Returns all users. Requires JWT authentication."
           },
           "response": []
         },
         {
-          "name": "GET Current User",
+          "name": "GET Current Customer Profile",
           "event": [
             {
               "listen": "test",
@@ -279,9 +184,11 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Current user email matches login user', function () {",
+                  "pm.test('Current user matches the registered customer', function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('primaryEmail'));",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('customerId')));",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('customerEmail'));",
+                  "    pm.expect(json.role).to.eql('CUSTOMER');",
                   "});"
                 ]
               }
@@ -292,7 +199,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{customerToken}}"
               }
             ],
             "url": {
@@ -305,13 +212,12 @@
                 "users",
                 "me"
               ]
-            },
-            "description": "Returns the currently authenticated user."
+            }
           },
           "response": []
         },
         {
-          "name": "PUT Update User",
+          "name": "PUT Current Customer Self Update",
           "event": [
             {
               "listen": "test",
@@ -322,13 +228,13 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "var json = pm.response.json();",
-                  "pm.collectionVariables.set('primaryEmail', json.email);",
-                  "pm.collectionVariables.set('primaryPassword', pm.collectionVariables.get('primaryUpdatedPassword'));",
+                  "pm.collectionVariables.set('customerPassword', pm.collectionVariables.get('customerUpdatedPassword'));",
                   "",
-                  "pm.test('Updated user payload is correct', function () {",
-                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('userId')));",
-                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('primaryUpdatedEmail'));",
+                  "pm.test('Self update keeps the same identity and role', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('customerId')));",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('customerEmail'));",
+                  "    pm.expect(json.role).to.eql('CUSTOMER');",
                   "});"
                 ]
               }
@@ -343,30 +249,29 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{customerToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id\": {{userId}},\n  \"name\": \"Alice Updated\",\n  \"email\": \"{{primaryUpdatedEmail}}\",\n  \"password\": \"{{primaryUpdatedPassword}}\"\n}"
+              "raw": "{\n  \"name\": \"Primary Customer Updated\",\n  \"password\": \"{{customerUpdatedPassword}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "raw": "{{baseUrl}}/api/users/me",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "users",
-                "{{userId}}"
+                "me"
               ]
-            },
-            "description": "Updates the primary test user. Collection variables are updated for subsequent authentication."
+            }
           },
           "response": []
         },
         {
-          "name": "POST Generate Token After Update",
+          "name": "POST Customer Login After Self Update",
           "event": [
             {
               "listen": "test",
@@ -378,9 +283,9 @@
                   "});",
                   "",
                   "var json = pm.response.json();",
-                  "pm.collectionVariables.set('token', json.token);",
+                  "pm.collectionVariables.set('customerToken', json.token);",
                   "",
-                  "pm.test('Updated credentials return a token', function () {",
+                  "pm.test('Updated password works for login', function () {",
                   "    pm.expect(json.token).to.be.a('string');",
                   "});"
                 ]
@@ -397,7 +302,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"{{primaryPassword}}\"\n}"
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/token",
@@ -409,32 +314,28 @@
                 "auth",
                 "token"
               ]
-            },
-            "description": "Generates a fresh token after updating the primary user's email and password."
+            }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "05 Negative Cases",
+      "name": "03 Privileged Auth",
       "item": [
         {
-          "name": "POST Invalid Login",
+          "name": "POST Manager Login",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 401', function () {",
-                  "    pm.response.to.have.status(401);",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
-                  "",
-                  "pm.test('Error message is correct', function () {",
-                  "    var json = pm.response.json();",
-                  "    pm.expect(json.message).to.eql('Invalid email or password');",
-                  "});"
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('managerToken', json.token);"
                 ]
               }
             }
@@ -449,7 +350,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{primaryEmail}}\",\n  \"password\": \"wrongpassword\"\n}"
+              "raw": "{\n  \"email\": \"{{bootstrapManagerEmail}}\",\n  \"password\": \"{{bootstrapManagerPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/token",
@@ -461,28 +362,1368 @@
                 "auth",
                 "token"
               ]
-            },
-            "description": "Invalid credentials should return 401."
+            }
           },
           "response": []
         },
         {
-          "name": "POST Invalid Create Payload",
+          "name": "POST Admin Login",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 400', function () {",
-                  "    pm.response.to.have.status(400);",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{bootstrapAdminEmail}}\",\n  \"password\": \"{{bootstrapAdminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 IAM Management",
+      "item": [
+        {
+          "name": "GET Admin List Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Manager Create Managed Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('managedCustomerId', String(json.id));",
+                  "",
+                  "pm.test('Managed customer starts as CUSTOMER', function () {",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('managedEmail'));",
+                  "    pm.expect(json.role).to.eql('CUSTOMER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Read Enabled Customer\",\n  \"email\": \"{{managedEmail}}\",\n  \"password\": \"{{managedPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Manager Batch Create Customers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('batchOneId', String(json[0].id));",
+                  "pm.collectionVariables.set('batchTwoId', String(json[1].id));",
+                  "",
+                  "pm.test('Batch users are created as CUSTOMER', function () {",
+                  "    pm.expect(json).to.have.length(2);",
+                  "    pm.expect(json[0].role).to.eql('CUSTOMER');",
+                  "    pm.expect(json[1].role).to.eql('CUSTOMER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"users\": [\n    {\n      \"name\": \"Batch One\",\n      \"email\": \"{{batchOneEmail}}\",\n      \"password\": \"password123\"\n    },\n    {\n      \"name\": \"Batch Two\",\n      \"email\": \"{{batchTwoEmail}}\",\n      \"password\": \"password123\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/users/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "users",
+                "batch"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Grant Managed Customer Read Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Managed customer is upgraded to read-allowed', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.role).to.eql('CUSTOMER_WITH_READ_ALLOWED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/users/{{managedCustomerId}}/grant-read-access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "users",
+                "{{managedCustomerId}}",
+                "grant-read-access"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Read-Allowed Customer Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('readAllowedToken', json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{managedEmail}}\",\n  \"password\": \"{{managedPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Manager View Managed User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Manager sees upgraded managed user', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('managedCustomerId')));",
+                  "    pm.expect(json.role).to.eql('CUSTOMER_WITH_READ_ALLOWED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{managedCustomerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{managedCustomerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Role Catalog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Role catalog includes ADMIN and MANAGER', function () {",
+                  "    var roles = pm.response.json().map(function (item) { return item.role; });",
+                  "    pm.expect(roles).to.include('ADMIN');",
+                  "    pm.expect(roles).to.include('MANAGER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "roles"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Manager Console Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Manager console scope is returned', function () {",
+                  "    pm.expect(pm.response.json().scope).to.eql('manager-console');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/access/manager-console",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "access",
+                "manager-console"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Admin Console Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Admin console scope is returned', function () {",
+                  "    pm.expect(pm.response.json().scope).to.eql('admin-console');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/access/admin-console",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "access",
+                "admin-console"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Customer Read Access Gate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Read-allowed customer gets customer-read scope', function () {",
+                  "    pm.expect(pm.response.json().scope).to.eql('customer-read');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{readAllowedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/access/customer-read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "access",
+                "customer-read"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Managed User Flag Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Managed user is initially unflagged and active', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('managedCustomerId')));",
+                  "    pm.expect(json.flagged).to.eql(false);",
+                  "    pm.expect(json.active).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/users/{{managedCustomerId}}/flag-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "users",
+                "{{managedCustomerId}}",
+                "flag-status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Scan Overdue Loans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Overdue scan returns an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/users/flags/scan-overdue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "users",
+                "flags",
+                "scan-overdue"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Flagged Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Flagged users response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/users/flagged",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "iam",
+                "users",
+                "flagged"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Library Flow",
+      "item": [
+        {
+          "name": "POST Manager Create Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('bookId', String(json.id));",
+                  "",
+                  "pm.test('Created book payload is returned', function () {",
+                  "    pm.expect(json.title).to.eql(pm.collectionVariables.get('bookTitle'));",
+                  "    pm.expect(json.physicalStockQuantity).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{bookTitle}}\",\n  \"author\": \"Martin Fowler\",\n  \"genre\": \"Technology\",\n  \"publisher\": \"Addison-Wesley\",\n  \"publishedDate\": \"2020-01-01\",\n  \"isbn\": \"{{bookIsbn}}\",\n  \"description\": \"Operational library workflow sample title.\",\n  \"physicalStockQuantity\": 4,\n  \"ebookAvailable\": true,\n  \"inStoreReadAvailable\": true,\n  \"language\": \"English\",\n  \"pageCount\": 320\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/books",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Customer Browse Catalog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var books = pm.response.json();",
+                  "var match = books.find(function (book) {",
+                  "    return book.id === Number(pm.collectionVariables.get('bookId'));",
                   "});",
                   "",
-                  "pm.test('Validation response contains email and password errors', function () {",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Catalog contains the created book', function () {",
+                  "    pm.expect(match).to.exist;",
+                  "    pm.expect(match.title).to.eql(pm.collectionVariables.get('bookTitle'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer Like Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Book is marked liked for current customer', function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json.message).to.eql('Validation failed');",
-                  "    pm.expect(json.errors.email).to.exist;",
-                  "    pm.expect(json.errors.password).to.exist;",
+                  "    pm.expect(json.likedByCurrentUser).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "like"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer Favorite Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Book is marked favorite for current customer', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.favoritedByCurrentUser).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/favorite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "favorite"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer Ebook Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Access history is recorded as EBOOK', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.accessType).to.eql('EBOOK');",
+                  "    pm.expect(json.status).to.eql('COMPLETED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/access/ebook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "access",
+                "ebook"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer In-Store Read Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Access history is recorded as IN_STORE_READ', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.accessType).to.eql('IN_STORE_READ');",
+                  "    pm.expect(json.status).to.eql('COMPLETED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/access/in-store",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "access",
+                "in-store"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer Reserve Physical Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Reservation is active for the customer', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.bookId).to.eql(Number(pm.collectionVariables.get('bookId')));",
+                  "    pm.expect(json.userId).to.eql(Number(pm.collectionVariables.get('customerId')));",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/reserve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer Duplicate Reserve Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Duplicate reservation message is returned', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('You already have an active reservation for this book');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/reserve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Customer Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var reservations = pm.response.json();",
+                  "var match = reservations.find(function (reservation) {",
+                  "    return reservation.bookId === Number(pm.collectionVariables.get('bookId'));",
+                  "});",
+                  "",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Customer reservation list includes the reserved book', function () {",
+                  "    pm.expect(match).to.exist;",
+                  "    pm.expect(match.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/reservations/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "reservations",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Customer Return Reserved Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Reservation is cancelled when returned', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('CANCELLED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/reservation/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "reservation",
+                "return"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Read-Allowed Customer Checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Physical checkout is active for read-allowed user', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.bookId).to.eql(Number(pm.collectionVariables.get('bookId')));",
+                  "    pm.expect(json.accessType).to.eql('PHYSICAL_TAKE_HOME');",
+                  "    pm.expect(json.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{readAllowedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "checkout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Read-Allowed Customer Duplicate Checkout Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Duplicate checkout message is returned', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('You already have this physical book checked out');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{readAllowedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "checkout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Read-Allowed Customer History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var history = pm.response.json();",
+                  "var checkout = history.find(function (entry) {",
+                  "    return entry.bookId === Number(pm.collectionVariables.get('bookId')) && entry.accessType === 'PHYSICAL_TAKE_HOME';",
+                  "});",
+                  "",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('History includes the physical checkout', function () {",
+                  "    pm.expect(checkout).to.exist;",
+                  "    pm.expect(checkout.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{readAllowedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/history/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "history",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Read-Allowed Customer Return",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Physical checkout is returned', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.accessType).to.eql('PHYSICAL_TAKE_HOME');",
+                  "    pm.expect(json.status).to.eql('RETURNED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{readAllowedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "return"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Manager Managed User History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var history = pm.response.json();",
+                  "var checkout = history.find(function (entry) {",
+                  "    return entry.bookId === Number(pm.collectionVariables.get('bookId')) && entry.accessType === 'PHYSICAL_TAKE_HOME';",
+                  "});",
+                  "",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Manager can inspect managed user lending history', function () {",
+                  "    pm.expect(checkout).to.exist;",
+                  "    pm.expect(checkout.status).to.eql('RETURNED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/history/users/{{managedCustomerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "history",
+                "users",
+                "{{managedCustomerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Manager Public Customer Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var reservations = pm.response.json();",
+                  "var match = reservations.find(function (reservation) {",
+                  "    return reservation.bookId === Number(pm.collectionVariables.get('bookId'));",
+                  "});",
+                  "",
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Manager can inspect customer reservations', function () {",
+                  "    pm.expect(match).to.exist;",
+                  "    pm.expect(match.userId).to.eql(Number(pm.collectionVariables.get('customerId')));",
+                  "    pm.expect(match.status).to.eql('CANCELLED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/reservations/users/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "reservations",
+                "users",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Negative Cases",
+      "item": [
+        {
+          "name": "POST Duplicate Public Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Duplicate email message is returned', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Email already registered');",
                   "});"
                 ]
               }
@@ -498,7 +1739,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\"\n}"
+              "raw": "{\n  \"name\": \"Duplicate Customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users",
@@ -509,8 +1750,48 @@
                 "api",
                 "users"
               ]
-            },
-            "description": "Malformed email and too-short password should fail validation."
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Plain Customer Checkout Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Forbidden message is returned', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}",
+                "checkout"
+              ]
+            }
           },
           "response": []
         },
@@ -525,10 +1806,8 @@
                   "pm.test('Status is 401', function () {",
                   "    pm.response.to.have.status(401);",
                   "});",
-                  "",
                   "pm.test('Unauthorized message is returned', function () {",
-                  "    var json = pm.response.json();",
-                  "    pm.expect(json.message).to.eql('Unauthorized');",
+                  "    pm.expect(pm.response.json().message).to.eql('Unauthorized');",
                   "});"
                 ]
               }
@@ -538,378 +1817,15 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/users",
+              "raw": "{{baseUrl}}/api/books",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "users"
+                "books"
               ]
-            },
-            "description": "Protected route without a Bearer token."
-          },
-          "response": []
-        },
-        {
-          "name": "POST Duplicate Email",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 409', function () {",
-                  "    pm.response.to.have.status(409);",
-                  "});",
-                  "",
-                  "pm.test('Conflict message is returned', function () {",
-                  "    var json = pm.response.json();",
-                  "    pm.expect(json.message).to.eql('Email already registered');",
-                  "});"
-                ]
-              }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Bob Again\",\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users"
-              ]
-            },
-            "description": "Attempts to create an already-registered email."
-          },
-          "response": []
-        },
-        {
-          "name": "PUT Missing User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Not found message is returned', function () {",
-                  "    var json = pm.response.json();",
-                  "    pm.expect(json.message).to.eql('User not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": 9999,\n  \"name\": \"Missing User\",\n  \"email\": \"missing@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/users/9999",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "9999"
-              ]
-            },
-            "description": "Updating a missing user should return 404."
-          },
-          "response": []
-        },
-        {
-          "name": "DELETE Missing User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Not found message is returned', function () {",
-                  "    var json = pm.response.json();",
-                  "    pm.expect(json.message).to.eql('User not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/9999",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "9999"
-              ]
-            },
-            "description": "Deleting a missing user should return 404."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "06 Legacy Alias Endpoints",
-      "item": [
-        {
-          "name": "POST Create User Alias",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Cara\",\n  \"email\": \"{{aliasEmail}}\",\n  \"password\": \"{{aliasPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/Users/addUser",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "Users",
-                "addUser"
-              ]
-            },
-            "description": "Legacy alias for public user creation."
-          },
-          "response": []
-        },
-        {
-          "name": "POST Generate Token Alias",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "var json = pm.response.json();",
-                  "pm.collectionVariables.set('legacyToken', json.token);",
-                  "",
-                  "pm.test('Legacy token is present', function () {",
-                  "    pm.expect(json.token).to.be.a('string');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/generateToken",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "generateToken"
-              ]
-            },
-            "description": "Legacy alias for JWT generation."
-          },
-          "response": []
-        },
-        {
-          "name": "GET All Users Alias",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/AllUsers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "AllUsers"
-              ]
-            },
-            "description": "Legacy alias for listing all users."
-          },
-          "response": []
-        },
-        {
-          "name": "GET Current User Alias",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/currentuser",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "currentuser"
-              ]
-            },
-            "description": "Legacy alias for current authenticated user."
-          },
-          "response": []
-        },
-        {
-          "name": "PUT Update User Alias",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "var json = pm.response.json();",
-                  "pm.collectionVariables.set('registeredEmail', json.email);",
-                  "",
-                  "pm.test('Legacy update returns the expected registered user id', function () {",
-                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('registeredUserId')));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": {{registeredUserId}},\n  \"name\": \"Bob Updated\",\n  \"email\": \"{{registeredUpdatedEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/users/UpdateExistingUser",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "UpdateExistingUser"
-              ]
-            },
-            "description": "Legacy alias for update. Uses body id because the alias path has no path variable."
           },
           "response": []
         }
@@ -919,7 +1835,7 @@
       "name": "07 Cleanup",
       "item": [
         {
-          "name": "DELETE Registered User Alias",
+          "name": "DELETE Batch Customer One",
           "event": [
             {
               "listen": "test",
@@ -938,27 +1854,25 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{managerToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/users/deleteUser/{{registeredUserId}}",
+              "raw": "{{baseUrl}}/api/users/{{batchOneId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "users",
-                "deleteUser",
-                "{{registeredUserId}}"
+                "{{batchOneId}}"
               ]
-            },
-            "description": "Deletes the registered user using the legacy delete alias."
+            }
           },
           "response": []
         },
         {
-          "name": "DELETE Primary User",
+          "name": "DELETE Batch Customer Two",
           "event": [
             {
               "listen": "test",
@@ -977,21 +1891,63 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{managerToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "raw": "{{baseUrl}}/api/users/{{batchTwoId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "users",
-                "{{userId}}"
+                "{{batchTwoId}}"
               ]
-            },
-            "description": "Deletes the main created test user at the very end of the collection."
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Archive Managed Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}?forceArchiveWithActiveLoans=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "books",
+                "{{bookId}}"
+              ],
+              "query": [
+                {
+                  "key": "forceArchiveWithActiveLoans",
+                  "value": "true"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -1008,55 +1964,91 @@
       "value": ""
     },
     {
-      "key": "primaryEmail",
+      "key": "customerEmail",
       "value": ""
     },
     {
-      "key": "primaryPassword",
+      "key": "customerPassword",
       "value": ""
     },
     {
-      "key": "primaryUpdatedEmail",
+      "key": "customerUpdatedPassword",
       "value": ""
     },
     {
-      "key": "primaryUpdatedPassword",
+      "key": "managedEmail",
       "value": ""
     },
     {
-      "key": "registeredEmail",
+      "key": "managedPassword",
       "value": ""
     },
     {
-      "key": "registeredPassword",
+      "key": "bootstrapAdminEmail",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "bootstrapAdminPassword",
+      "value": "admin12345"
+    },
+    {
+      "key": "bootstrapManagerEmail",
+      "value": "manager@example.com"
+    },
+    {
+      "key": "bootstrapManagerPassword",
+      "value": "manager12345"
+    },
+    {
+      "key": "batchOneEmail",
       "value": ""
     },
     {
-      "key": "registeredUpdatedEmail",
+      "key": "batchTwoEmail",
       "value": ""
     },
     {
-      "key": "aliasEmail",
+      "key": "bookTitle",
       "value": ""
     },
     {
-      "key": "aliasPassword",
+      "key": "bookIsbn",
       "value": ""
     },
     {
-      "key": "token",
+      "key": "customerToken",
       "value": ""
     },
     {
-      "key": "legacyToken",
+      "key": "managerToken",
       "value": ""
     },
     {
-      "key": "userId",
+      "key": "adminToken",
       "value": ""
     },
     {
-      "key": "registeredUserId",
+      "key": "readAllowedToken",
+      "value": ""
+    },
+    {
+      "key": "customerId",
+      "value": ""
+    },
+    {
+      "key": "managedCustomerId",
+      "value": ""
+    },
+    {
+      "key": "batchOneId",
+      "value": ""
+    },
+    {
+      "key": "batchTwoId",
+      "value": ""
+    },
+    {
+      "key": "bookId",
       "value": ""
     }
   ]

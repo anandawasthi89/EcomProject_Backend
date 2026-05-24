@@ -1,47 +1,57 @@
 # Test Suite
 
-The test suite is organized by responsibility rather than by framework only.
+The test suite is organized by responsibility and is intended to protect both HTTP contracts and business rules.
 
 ## Layout
 
-- `controller/`: endpoint and HTTP contract tests using MockMvc
-- `service/`: business-rule and persistence interaction tests using Mockito
-- `config/`: JWT, auth filter, password encoder, and security-related unit tests
+- `controller/`: MockMvc tests for endpoint behavior, security, and JSON contracts
+- `controller/BusinessFlowIntegrationTest.java`: end-to-end business flows against a real Spring context and in-memory database
+- `service/`: business-rule tests for IAM and library workflows
+- `config/`: JWT, security filter, auth entrypoint, and password encoder tests
 - `bean/`: DTO, entity, and application configuration model tests
 
-## Goals
+## What the Suite Covers
 
-- Protect the public API contract
-- Verify authentication and validation behavior
-- Catch regressions in user lifecycle logic
-- Keep configuration and security utilities testable in isolation
-- Support the CI workflow, which also smoke-tests both `dev` and `prod` profiles against temporary PostgreSQL instances
+- public registration and authentication flows
+- protected user-management behavior
+- role-based access restrictions
+- validation and error response format
+- book catalog and lending rules
+- reservation and overdue-flagging behavior
+- overdue scan, flagged-user resolution, and deactivation behavior
+- security and configuration utilities
 
-## Run Tests
+The integration-style business-flow suite uses the `test` Spring profile with H2 in PostgreSQL compatibility mode so the API flows run without depending on the local Docker or dev PostgreSQL database.
+
+## Running Tests
 
 ```bash
-mvn test
+./mvnw test
 ```
 
-Generate coverage:
+Coverage run:
 
 ```bash
-mvn clean test
+./mvnw clean test
 ```
 
-Coverage output is written to:
+Coverage output:
 
 ```text
 target/site/jacoco/index.html
 ```
 
+Current clean-run reference:
+
+- line coverage: `97.24%`
+
 ## CI Context
 
-The GitHub Actions pipeline runs:
+The GitHub Actions workflow validates:
 
-- unit tests
-- application packaging
-- profile-based smoke tests
-- Docker image build validation
+- test execution
+- JAR packaging
+- runtime startup for both `dev` and `prod`
+- Docker image build
 
-This keeps the portfolio demo story strong: the project is not only coded, it is also testable, containerized, and automation-friendly.
+This keeps changes verifiable at the unit, HTTP, and runtime levels.

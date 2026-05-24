@@ -1,29 +1,41 @@
 # Security Policy
 
-## Supported Use
+## Security-Sensitive Configuration
 
-This repository is intended to be deployed with externally managed secrets and environment-specific configuration.
+The application expects security-sensitive values to be supplied externally per environment.
 
-Security-sensitive configuration includes:
+Examples:
 
-- Database credentials
+- database credentials
 - JWT signing secrets
-- Allowed CORS origins
+- allowed CORS origins
 
-## Operational Security Notes
+These values should not be committed to the repository.
 
-- Never commit real values for `.env`, production database credentials, or production JWT secrets.
-- The Docker Compose credentials in this repository are local-demo defaults only and must not be reused in real deployments.
-- Use a strong Base64-encoded secret of at least 32 bytes for JWT signing.
-- Restrict production CORS origins to known frontend domains.
-- Rotate credentials immediately if they are exposed.
-- Review logs and deployment configuration after any auth or secret rotation change.
+## Current Security Controls
+
+- stateless JWT authentication
+- Spring Security filter chain with method-level authorization
+- role-based access control across IAM and library operations
+- centralized unauthorized, forbidden, validation, and exception handling
+- password hashing through BCrypt
+- environment-specific runtime configuration
+- operational logging for authentication, authorization, IAM writes, and lending events
+
+## Operational Guidance
+
+- never commit real `.env` files or production credentials
+- use a strong Base64-encoded JWT secret with at least 32 bytes of entropy
+- restrict production CORS origins to known frontend domains
+- rotate credentials immediately if exposed
+- review application logs after auth or permission-related changes
 
 ## Hardening Recommendations
 
-- Add rate limiting in front of authentication endpoints.
-- Run behind HTTPS only in production.
-- Use separate PostgreSQL roles per environment.
-- Keep production schema changes out of auto-migration mode; this project defaults real prod toward `validate`.
-- Add audit logging for sensitive user-management actions.
-- Consider refresh-token or session revocation support if authentication scope expands.
+- run behind HTTPS only
+- add rate limiting in front of authentication endpoints
+- use separate PostgreSQL roles per environment
+- move production schema changes to managed migrations
+- centralize log aggregation and retention
+- introduce audit-focused reporting for flagged users and privileged IAM actions
+- add refresh-token or revocation support if session control requirements grow

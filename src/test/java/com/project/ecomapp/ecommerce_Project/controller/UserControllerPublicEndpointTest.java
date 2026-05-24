@@ -1,6 +1,7 @@
 package com.project.ecomapp.ecommerce_Project.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.ecomapp.ecommerce_Project.Bean.UserRole;
 import com.project.ecomapp.ecommerce_Project.Bean.UserResponse;
 import com.project.ecomapp.ecommerce_Project.Config.JWTAuthenticationEntryPoint;
 import com.project.ecomapp.ecommerce_Project.Config.JWTAuthenticationFilter;
@@ -8,8 +9,8 @@ import com.project.ecomapp.ecommerce_Project.Config.JWTUtils;
 import com.project.ecomapp.ecommerce_Project.Config.PasswordConfiguration;
 import com.project.ecomapp.ecommerce_Project.Config.SecurityConfiguration;
 import com.project.ecomapp.ecommerce_Project.Controller.ApiExceptionHandler;
-import com.project.ecomapp.ecommerce_Project.Controller.UserController;
-import com.project.ecomapp.ecommerce_Project.Services.CustomUserDetailsService;
+import com.project.ecomapp.ecommerce_Project.user.controller.UserController;
+import com.project.ecomapp.ecommerce_Project.user.service.CustomUserDetailsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -60,7 +61,7 @@ class UserControllerPublicEndpointTest {
 
     @Test
     void addNewUserReturnsCreatedUser() throws Exception {
-        UserResponse createdUser = new UserResponse(1, "Alice", "alice@example.com");
+        UserResponse createdUser = userResponse(1, "Alice", "alice@example.com", UserRole.CUSTOMER);
         when(customUserDetailsService.addNewUser("alice@example.com", "password123", "Alice"))
                 .thenReturn(createdUser);
 
@@ -70,14 +71,15 @@ class UserControllerPublicEndpointTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Alice"))
-                .andExpect(jsonPath("$.email").value("alice@example.com"));
+                .andExpect(jsonPath("$.email").value("alice@example.com"))
+                .andExpect(jsonPath("$.role").value("CUSTOMER"));
 
         verify(customUserDetailsService).addNewUser("alice@example.com", "password123", "Alice");
     }
 
     @Test
     void registerUserReturnsCreatedUser() throws Exception {
-        UserResponse createdUser = new UserResponse(2, "Bob", "bob@example.com");
+        UserResponse createdUser = userResponse(2, "Bob", "bob@example.com", UserRole.CUSTOMER);
         when(customUserDetailsService.addNewUser("bob@example.com", "password123", "Bob"))
                 .thenReturn(createdUser);
 
@@ -87,7 +89,8 @@ class UserControllerPublicEndpointTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.name").value("Bob"))
-                .andExpect(jsonPath("$.email").value("bob@example.com"));
+                .andExpect(jsonPath("$.email").value("bob@example.com"))
+                .andExpect(jsonPath("$.role").value("CUSTOMER"));
     }
 
     @Test
@@ -115,7 +118,7 @@ class UserControllerPublicEndpointTest {
 
     @Test
     void addUserAliasEndpointAlsoCreatesUser() throws Exception {
-        UserResponse createdUser = new UserResponse(3, "Cara", "cara@example.com");
+        UserResponse createdUser = userResponse(3, "Cara", "cara@example.com", UserRole.CUSTOMER);
         when(customUserDetailsService.addNewUser(any(), any(), any())).thenReturn(createdUser);
 
         mockMvc.perform(post("/Users/addUser")
@@ -130,5 +133,9 @@ class UserControllerPublicEndpointTest {
     }
 
     private record UpsertUserPayload(Integer id, String name, String email, String password) {
+    }
+
+    private static UserResponse userResponse(int id, String name, String email, UserRole role) {
+        return new UserResponse(id, name, email, role, false, true);
     }
 }
