@@ -1,31 +1,62 @@
 services:
-  app-dev:
+
+  redis:
+    image: redis:7
+    container_name: shared-redis
+    ports:
+      - "6379:6379"
+
+  ecom-app-dev:
     build:
-      context: .
+      context: ./EcomProject_Backend
     container_name: ecommerce-app-dev
+
     env_file:
-      - .env.template
-      - .env.dev.template
+      - ./EcomProject_Backend/.env.template
+      - ./EcomProject_Backend/.env.dev.template
+
     environment:
       SPRING_PROFILES_ACTIVE: dev
+
       DEV_DB_URL: jdbc:postgresql://host.docker.internal:5432/ecommerce_dev
       DEV_DB_USERNAME: postgres
       DEV_DB_PASSWORD: postgres
-      SPRING_REDIS_HOST: redis-cache
+
+      SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+
     ports:
       - "9005:9005"
-    depends_on:
-      - redis-cache
 
-  redis-cache:
-    image: redis:7
-    container_name: redis-cache
+    depends_on:
+      - redis
+
+  rag-ingestion:
+    build:
+      context: ./Ingestion_Pipeline
+    container_name: ingestion-pipeline-dev
+
+    environment:
+      DEV_DB_URL: jdbc:postgresql://host.docker.internal:5432/ecommerce_dev
+      DEV_DB_USERNAME: postgres
+      DEV_DB_PASSWORD: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
     ports:
-      - "6379:6379"
+      - "9006:9006"
+
+    depends_on:
+      - redis
+    
+    volumes:
+      - /Users/anandawasthi/Downloads/data:/app/books
+      - /Users/anandawasthi/Documents/AI Engineering/E-com/EcomProject_Backend/Ingestion_Pipeline/vectorDB:/app/vectorDB
 
   adminer:
     image: adminer:4
     container_name: ecommerce-adminer
+
     ports:
       - "8080:8080"

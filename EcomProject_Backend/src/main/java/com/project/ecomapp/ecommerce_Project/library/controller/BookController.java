@@ -67,10 +67,10 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(bookCatalogResponse);
     }
 
-    @GetMapping("/dummy/{key}")
+    @GetMapping("/dummy")
     @PreAuthorize("isAuthenticated()")
-    public BookUploadPayload dummyBookUploadPayloadConsumer(@PathVariable String key, Authentication authentication) {
-        BookUploadPayload bookUploadPayload = redisListPublisher.dummyConsume(key);
+    public BookUploadPayload dummyBookUploadPayloadConsumer(Authentication authentication) {
+        BookUploadPayload bookUploadPayload = redisListPublisher.dummyConsume();
         LOGGER.debug("Dummy consumer {}", authentication.getName());
         return bookUploadPayload;
     }
